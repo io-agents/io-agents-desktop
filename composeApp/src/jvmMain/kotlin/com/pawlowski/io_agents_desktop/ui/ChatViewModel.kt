@@ -66,6 +66,7 @@ class ChatViewModel {
                 _state.update { currentState ->
                     currentState.copy(
                         currentClarificationRequest = request,
+                        isLoading = false, // Stop loading when waiting for user clarification
                         messages = currentState.messages + ChatMessage(
                             text = "🤔 Zanim przejdę dalej, chciałbym lepiej zrozumieć Twoje wymagania:\n\n$request\n\nProszę, odpowiedz na te pytania, żebym mógł stworzyć dokładniejszy diagram.",
                             isUser = false,
@@ -81,6 +82,7 @@ class ChatViewModel {
                 _state.update { currentState ->
                     currentState.copy(
                         currentAcceptanceRequest = request,
+                        isLoading = false, // Stop loading when waiting for user acceptance
                         messages = currentState.messages + ChatMessage(
                             text = "✅ Stworzyłem diagram! Sprawdź proszę:\n\n$request\n\nJeśli wszystko wygląda dobrze, napisz 'ACCEPT'. Jeśli chcesz coś zmienić, opisz co dokładnie.",
                             isUser = false,
@@ -145,6 +147,7 @@ class ChatViewModel {
                 messages = currentState.messages + userMessage,
                 inputText = "",
                 currentClarificationRequest = null,
+                isLoading = true, // Resume loading after sending clarification response
             )
         }
 
@@ -162,6 +165,7 @@ class ChatViewModel {
                 messages = currentState.messages + userMessage,
                 inputText = "",
                 currentAcceptanceRequest = null,
+                isLoading = true, // Resume loading after sending acceptance response
             )
         }
 
