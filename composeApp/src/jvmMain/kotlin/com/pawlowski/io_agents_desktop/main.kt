@@ -8,6 +8,6 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         title = "io_agents_desktop",
     ) {
-        App()
+        App(onExit = ::exitApplication)
     }
 }

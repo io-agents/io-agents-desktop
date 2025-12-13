@@ -1,5 +1,6 @@
 package com.pawlowski.io_agents_desktop.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.toComposeImageBitmap
@@ -20,7 +22,10 @@ import java.io.File
 import javax.imageio.ImageIO
 
 @Composable
-fun AiChat(modifier: Modifier = Modifier) {
+fun AiChat(
+    modifier: Modifier = Modifier,
+    onExit: () -> Unit = {},
+) {
     val viewModel = remember { ChatViewModel() }
     var state by remember { mutableStateOf(viewModel.state.value) }
 
@@ -50,13 +55,29 @@ fun AiChat(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Next actions menu (shown when completed)
+        if (state.isCompleted && state.availableNextActions.isNotEmpty()) {
+            NextActionsMenu(
+                actions = state.availableNextActions,
+                onActionSelected = { action ->
+                    if (action is NextAction.Exit) {
+                        onExit()
+                    } else {
+                        viewModel.handleNextAction(action)
+                    }
+                },
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        
         // Input field
         ChatInput(
             text = state.inputText,
             onTextChange = viewModel::updateInputText,
             onSendClick = viewModel::onSendClick,
-            enabled = !state.isLoading,
+            enabled = !state.isLoading && !state.isCompleted,
             placeholder = when {
+                state.isCompleted -> "Wybierz opcję powyżej..."
                 state.currentClarificationRequest != null -> "Odpowiedz na pytanie..."
                 state.currentAcceptanceRequest != null -> "Wpisz 'ACCEPT' lub poprawki..."
                 else -> "Napisz wiadomość..."
@@ -196,6 +217,50 @@ private fun LoadingIndicator() {
                     style = MaterialTheme.typography.bodyMedium,
                     fontSize = 12.sp,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NextActionsMenu(
+    actions: List<NextAction>,
+    onActionSelected: (NextAction) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = "Wybierz akcję:",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
+        
+        actions.forEach { action ->
+            Card(
+                onClick = { onActionSelected(action) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                ) {
+                    Text(
+                        text = action.displayText,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    )
+                    Text(
+                        text = action.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    )
+                }
             }
         }
     }

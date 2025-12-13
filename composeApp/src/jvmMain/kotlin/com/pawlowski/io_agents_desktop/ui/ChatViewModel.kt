@@ -37,6 +37,8 @@ data class ChatState(
     val currentClarificationRequest: String? = null,
     val currentAcceptanceRequest: String? = null,
     val inputText: String = "",
+    val isCompleted: Boolean = false,
+    val availableNextActions: List<NextAction> = emptyList(),
 )
 
 class ChatViewModel {
@@ -173,17 +175,77 @@ class ChatViewModel {
         if (text.isBlank()) return
 
         val userMessage = ChatMessage(text = text, isUser = true)
+        val isAccepted = text.trim().uppercase() == "ACCEPT"
+        
         _state.update { currentState ->
             currentState.copy(
                 messages = currentState.messages + userMessage,
                 inputText = "",
                 currentAcceptanceRequest = null,
-                isLoading = true, // Resume loading after sending acceptance response
+                isLoading = !isAccepted, // Only resume loading if not accepted (will need corrections)
             )
         }
 
         viewModelScope.launch {
             chatUseCase.handleAcceptance(text)
+            
+            // If accepted, show completion menu
+            if (isAccepted) {
+                showCompletionMenu()
+            }
+        }
+    }
+    
+    private fun showCompletionMenu() {
+        _state.update { currentState ->
+            val menuText = buildString {
+                appendLine("✅ Diagram został zaakceptowany!")
+                appendLine()
+                appendLine("Co chciałbyś zrobić dalej?")
+                appendLine()
+                NextAction.allActions.forEachIndexed { index, action ->
+                    appendLine("${index + 1}. ${action.displayText} - ${action.description}")
+                }
+            }
+            
+            currentState.copy(
+                messages = currentState.messages + ChatMessage(
+                    text = menuText,
+                    isUser = false,
+                ),
+                isCompleted = true,
+                availableNextActions = NextAction.allActions,
+            )
+        }
+    }
+    
+    fun handleNextAction(action: NextAction) {
+        when (action) {
+            is NextAction.NewDiagram -> {
+                // Reset agent and start new diagram
+                chatUseCase.resetAgent()
+                _state.update { currentState ->
+                    currentState.copy(
+                        isCompleted = false,
+                        availableNextActions = emptyList(),
+                        messages = currentState.messages + ChatMessage(
+                            text = "Świetnie! Stwórzmy nowy diagram. Opisz proszę, jaki diagram przypadków użycia chciałbyś wygenerować.",
+                            isUser = false,
+                        ),
+                    )
+                }
+            }
+            is NextAction.Exit -> {
+                // Exit application - this will be handled in UI
+                _state.update { currentState ->
+                    currentState.copy(
+                        messages = currentState.messages + ChatMessage(
+                            text = "Dziękuję za korzystanie z aplikacji! Do widzenia! 👋",
+                            isUser = false,
+                        ),
+                    )
+                }
+            }
         }
     }
 

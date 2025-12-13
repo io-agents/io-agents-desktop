@@ -39,5 +39,9 @@ class ChatUseCase(
     suspend fun handleAcceptance(acceptance: String) {
         acceptanceRepository.handleAcceptence(acceptance)
     }
+    
+    fun resetAgent() {
+        agentRepository.resetAgent()
+    }
 }
 

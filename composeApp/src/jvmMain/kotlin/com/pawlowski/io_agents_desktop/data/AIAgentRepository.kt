@@ -13,12 +13,23 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class AIAgentRepository {
+    private var apiKey: String? = null
+    private var strategy: AIAgentGraphStrategy<UseCaseDiagramInput, UseCaseDiagramOutput>? = null
     private var agent: AIAgent<UseCaseDiagramInput, UseCaseDiagramOutput>? = null
     private val _isProcessing = MutableStateFlow(false)
     val isProcessing: StateFlow<Boolean> = _isProcessing.asStateFlow()
 
     fun initialize(apiKey: String, strategy: AIAgentGraphStrategy<UseCaseDiagramInput, UseCaseDiagramOutput>) {
-        val promptExecutor = simpleGoogleAIExecutor(apiKey)
+        this.apiKey = apiKey
+        this.strategy = strategy
+        createNewAgent()
+    }
+    
+    private fun createNewAgent() {
+        val currentApiKey = apiKey ?: return
+        val currentStrategy = strategy ?: return
+        
+        val promptExecutor = simpleGoogleAIExecutor(currentApiKey)
 
         val agentConfig =
             AIAgentConfig(
@@ -29,9 +40,14 @@ class AIAgentRepository {
 
         agent = AIAgent(
             promptExecutor = promptExecutor,
-            strategy = strategy,
+            strategy = currentStrategy,
             agentConfig = agentConfig,
         )
+    }
+    
+    fun resetAgent() {
+        agent = null
+        createNewAgent()
     }
 
     suspend fun runAgent(input: UseCaseDiagramInput): Result<UseCaseDiagramOutput> {

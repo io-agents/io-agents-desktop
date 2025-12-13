@@ -9,10 +9,11 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 @Preview
-fun App() {
+fun App(onExit: () -> Unit = {}) {
     MaterialTheme {
         AiChat(
             modifier = Modifier.fillMaxSize(),
+            onExit = onExit,
         )
     }
 }
