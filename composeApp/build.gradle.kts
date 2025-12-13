@@ -30,7 +30,18 @@ kotlin {
             implementation("net.sourceforge.plantuml:plantuml:1.2025.10")
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+            // Force kotlinx-datetime-jvm version 0.6.2 as used by koog-agents 0.5.0
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime-jvm:0.6.2")
         }
+    }
+    
+}
+
+// Force resolution strategy to use 0.6.2 instead of 0.7.1
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
+        force("org.jetbrains.kotlinx:kotlinx-datetime-jvm:0.6.2")
     }
 }
 
