@@ -12,6 +12,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            val koogVersion = "0.5.0"
+            implementation("ai.koog:koog-agents:$koogVersion")
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
@@ -25,12 +27,12 @@ kotlin {
             implementation(libs.kotlin.test)
         }
         jvmMain.dependencies {
+            implementation("net.sourceforge.plantuml:plantuml:1.2025.10")
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
         }
     }
 }
-
 
 compose.desktop {
     application {
