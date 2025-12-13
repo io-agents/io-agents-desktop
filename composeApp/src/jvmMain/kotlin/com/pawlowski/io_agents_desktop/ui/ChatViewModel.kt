@@ -23,6 +23,7 @@ data class ChatMessage(
     val text: String,
     val isUser: Boolean,
     val timestamp: Long = System.currentTimeMillis(),
+    val diagramImagePath: String? = null,
 )
 
 data class ChatState(
@@ -52,6 +53,9 @@ class ChatViewModel {
 
     private val _state = MutableStateFlow(ChatState())
     val state: StateFlow<ChatState> = _state.asStateFlow()
+    
+    // Store the last generated diagram path to show it in acceptance request
+    private var lastDiagramPath: String? = null
 
     init {
         // Initialize with API key from environment
@@ -79,13 +83,19 @@ class ChatViewModel {
         // Observe acceptance requests
         chatUseCase.observeAcceptanceRequests()
             .onEach { request ->
+                // Diagram should already be saved at this point (generated in generateDiagramNode)
+                // Use the standard path where diagram is saved
+                val diagramPath = "use_case_diagram.png"
+                lastDiagramPath = diagramPath
+                
                 _state.update { currentState ->
                     currentState.copy(
                         currentAcceptanceRequest = request,
                         isLoading = false, // Stop loading when waiting for user acceptance
                         messages = currentState.messages + ChatMessage(
-                            text = "✅ Stworzyłem diagram! Sprawdź proszę:\n\n$request\n\nJeśli wszystko wygląda dobrze, napisz 'ACCEPT'. Jeśli chcesz coś zmienić, opisz co dokładnie.",
+                            text = "✅ Stworzyłem diagram! Sprawdź proszę powyżej.\n\nJeśli wszystko wygląda dobrze, napisz 'ACCEPT'. Jeśli chcesz coś zmienić, opisz co dokładnie.",
                             isUser = false,
+                            diagramImagePath = diagramPath, // Show the diagram in acceptance request
                         ),
                     )
                 }
@@ -115,11 +125,14 @@ class ChatViewModel {
             val result = chatUseCase.processMessage(text)
             result.fold(
                 onSuccess = { output ->
+                    val diagramPath = "use_case_diagram.png"
+                    lastDiagramPath = diagramPath
                     _state.update { currentState ->
                         currentState.copy(
                             messages = currentState.messages + ChatMessage(
-                                text = "🎉 Diagram został wygenerowany pomyślnie!\n\nOto kod PlantUML:\n\n```\n${output.plantUmlText}\n```\n\nDiagram został również zapisany jako plik PNG: use_case_diagram.png",
+                                text = "🎉 Diagram został wygenerowany pomyślnie!",
                                 isUser = false,
+                                diagramImagePath = diagramPath,
                             ),
                         )
                     }

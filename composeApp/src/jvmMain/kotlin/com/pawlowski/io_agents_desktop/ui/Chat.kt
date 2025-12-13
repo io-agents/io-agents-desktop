@@ -5,12 +5,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import java.awt.image.BufferedImage
+import java.io.File
+import javax.imageio.ImageIO
 
 @Composable
 fun AiChat(modifier: Modifier = Modifier) {
@@ -111,12 +118,54 @@ private fun MessageBubble(message: ChatMessage) {
                 bottomEnd = if (message.isUser) 4.dp else 16.dp,
             ),
         ) {
-            Text(
-                text = message.text,
+            Column(
                 modifier = Modifier.padding(12.dp),
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            ) {
+                SelectionContainer {
+                    Text(
+                        text = message.text,
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+                
+                // Display diagram image if available
+                message.diagramImagePath?.let { imagePath ->
+                    val imageFile = File(imagePath)
+                    if (imageFile.exists()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        DiagramImage(imagePath = imagePath)
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun DiagramImage(imagePath: String) {
+    val imageBitmap = remember(imagePath) {
+        try {
+            val file = File(imagePath)
+            if (file.exists()) {
+                val bufferedImage: BufferedImage? = ImageIO.read(file)
+                bufferedImage?.toComposeImageBitmap()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    imageBitmap?.let { bitmap ->
+        androidx.compose.foundation.Image(
+            bitmap = bitmap,
+            contentDescription = "Use Case Diagram",
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            contentScale = ContentScale.Fit,
+        )
     }
 }
 
