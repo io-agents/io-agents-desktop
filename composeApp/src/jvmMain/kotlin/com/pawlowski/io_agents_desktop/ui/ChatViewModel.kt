@@ -3,9 +3,6 @@ package com.pawlowski.io_agents_desktop.ui
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.pawlowski.io_agents_desktop.data.AcceptanceRepository
-import com.pawlowski.io_agents_desktop.data.AIAgentRepository
-import com.pawlowski.io_agents_desktop.data.ClarificationRepository
 import com.pawlowski.io_agents_desktop.domain.ChatUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,17 +38,10 @@ data class ChatState(
     val availableNextActions: List<NextAction> = emptyList(),
 )
 
-class ChatViewModel {
+class ChatViewModel(
+    private val chatUseCase: ChatUseCase,
+) {
     private val viewModelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    
-    private val agentRepository = AIAgentRepository()
-    private val clarificationRepository = ClarificationRepository()
-    private val acceptanceRepository = AcceptanceRepository()
-    private val chatUseCase = ChatUseCase(
-        agentRepository = agentRepository,
-        clarificationRepository = clarificationRepository,
-        acceptanceRepository = acceptanceRepository,
-    )
 
     private val _state = MutableStateFlow(ChatState())
     val state: StateFlow<ChatState> = _state.asStateFlow()

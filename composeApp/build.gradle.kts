@@ -14,6 +14,7 @@ kotlin {
         commonMain.dependencies {
             val koogVersion = "0.5.0"
             implementation("ai.koog:koog-agents:$koogVersion")
+            implementation(libs.koin.core)
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)

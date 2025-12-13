@@ -1,6 +1,5 @@
 package com.pawlowski.io_agents_desktop.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,11 +11,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.toComposeImageBitmap
+import org.jetbrains.skia.Bitmap
+import org.jetbrains.skia.Image
+import org.koin.core.context.GlobalContext
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
@@ -26,7 +27,7 @@ fun AiChat(
     modifier: Modifier = Modifier,
     onExit: () -> Unit = {},
 ) {
-    val viewModel = remember { ChatViewModel() }
+    val viewModel: ChatViewModel = remember { GlobalContext.get().get() }
     var state by remember { mutableStateOf(viewModel.state.value) }
 
     LaunchedEffect(Unit) {
@@ -42,9 +43,10 @@ fun AiChat(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(16.dp),
     ) {
         // Chat messages
         MessagesList(
@@ -69,19 +71,20 @@ fun AiChat(
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
-        
+
         // Input field
         ChatInput(
             text = state.inputText,
             onTextChange = viewModel::updateInputText,
             onSendClick = viewModel::onSendClick,
             enabled = !state.isLoading && !state.isCompleted,
-            placeholder = when {
-                state.isCompleted -> "Wybierz opcję powyżej..."
-                state.currentClarificationRequest != null -> "Odpowiedz na pytanie..."
-                state.currentAcceptanceRequest != null -> "Wpisz 'ACCEPT' lub poprawki..."
-                else -> "Napisz wiadomość..."
-            },
+            placeholder =
+                when {
+                    state.isCompleted -> "Wybierz opcję powyżej..."
+                    state.currentClarificationRequest != null -> "Odpowiedz na pytanie..."
+                    state.currentAcceptanceRequest != null -> "Wpisz 'ACCEPT' lub poprawki..."
+                    else -> "Napisz wiadomość..."
+                },
         )
     }
 }
@@ -125,19 +128,22 @@ private fun MessageBubble(message: ChatMessage) {
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(0.75f),
-            colors = CardDefaults.cardColors(
-                containerColor = if (message.isUser) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                },
-            ),
-            shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (message.isUser) 16.dp else 4.dp,
-                bottomEnd = if (message.isUser) 4.dp else 16.dp,
-            ),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor =
+                        if (message.isUser) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
+                ),
+            shape =
+                RoundedCornerShape(
+                    topStart = 16.dp,
+                    topEnd = 16.dp,
+                    bottomStart = if (message.isUser) 16.dp else 4.dp,
+                    bottomEnd = if (message.isUser) 4.dp else 16.dp,
+                ),
         ) {
             Column(
                 modifier = Modifier.padding(12.dp),
@@ -148,7 +154,7 @@ private fun MessageBubble(message: ChatMessage) {
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
-                
+
                 // Display diagram image if available
                 message.diagramImagePath?.let { imagePath ->
                     val imageFile = File(imagePath)
@@ -164,27 +170,34 @@ private fun MessageBubble(message: ChatMessage) {
 
 @Composable
 private fun DiagramImage(imagePath: String) {
-    val imageBitmap = remember(imagePath) {
-        try {
-            val file = File(imagePath)
-            if (file.exists()) {
-                val bufferedImage: BufferedImage? = ImageIO.read(file)
-                bufferedImage?.toComposeImageBitmap()
-            } else {
+    val imageBitmap: ImageBitmap? =
+        remember(imagePath) {
+            try {
+                val file = File(imagePath)
+                if (file.exists()) {
+                    val bufferedImage: BufferedImage? = ImageIO.read(file)
+                    bufferedImage?.let { img ->
+                        val imageBytes = file.readBytes()
+                        val image = Image.makeFromEncoded(imageBytes)
+                        val bitmap = Bitmap.makeFromImage(image)
+                        bitmap.asComposeImageBitmap()
+                    }
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
                 null
             }
-        } catch (e: Exception) {
-            null
         }
-    }
-    
+
     imageBitmap?.let { bitmap ->
         androidx.compose.foundation.Image(
             bitmap = bitmap,
             contentDescription = "Use Case Diagram",
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
             contentScale = ContentScale.Fit,
         )
     }
@@ -198,9 +211,10 @@ private fun LoadingIndicator() {
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(0.2f),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
             shape = RoundedCornerShape(16.dp),
         ) {
             Row(
@@ -228,9 +242,10 @@ private fun NextActionsMenu(
     onActionSelected: (NextAction) -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
@@ -238,14 +253,15 @@ private fun NextActionsMenu(
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(bottom = 4.dp),
         )
-        
+
         actions.forEach { action ->
             Card(
                 onClick = { onActionSelected(action) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                ),
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
