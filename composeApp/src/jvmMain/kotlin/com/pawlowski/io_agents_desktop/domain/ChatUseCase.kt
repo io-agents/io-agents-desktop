@@ -3,6 +3,7 @@ package com.pawlowski.io_agents_desktop.domain
 import com.pawlowski.io_agents_desktop.data.AIAgentRepository
 import com.pawlowski.io_agents_desktop.data.AcceptanceRepository
 import com.pawlowski.io_agents_desktop.data.ClarificationRepository
+import com.pawlowski.io_agents_desktop.data.WorkflowNodeTracker
 import com.pawlowski.io_agents_desktop.domain.useCase.UseCaseDiagramInput
 import com.pawlowski.io_agents_desktop.domain.useCase.UseCaseDiagramOutput
 import kotlinx.coroutines.flow.Flow
@@ -12,12 +13,15 @@ class ChatUseCase(
     private val agentRepository: AIAgentRepository,
     private val clarificationRepository: ClarificationRepository,
     private val acceptanceRepository: AcceptanceRepository,
+    private val workflowNodeTracker: WorkflowNodeTracker,
 ) {
     fun initialize(apiKey: String) {
-        val strategy = mainStrategy(
-            clarificationUseCase = clarificationRepository,
-            acceptance = acceptanceRepository,
-        )
+        val strategy =
+            mainStrategy(
+                clarificationUseCase = clarificationRepository,
+                acceptance = acceptanceRepository,
+                workflowNodeTracker = workflowNodeTracker,
+            )
         agentRepository.initialize(apiKey, strategy)
     }
 
@@ -39,9 +43,10 @@ class ChatUseCase(
     suspend fun handleAcceptance(acceptance: String) {
         acceptanceRepository.handleAcceptence(acceptance)
     }
-    
+
     fun resetAgent() {
         agentRepository.resetAgent()
     }
-}
 
+    val workflowExecution = workflowNodeTracker.execution
+}

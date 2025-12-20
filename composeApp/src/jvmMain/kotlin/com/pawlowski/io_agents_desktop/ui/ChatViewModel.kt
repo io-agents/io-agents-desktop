@@ -48,6 +48,9 @@ class ChatViewModel(
     
     // Store the last generated diagram path to show it in acceptance request
     private var lastDiagramPath: String? = null
+    
+    // Workflow execution state
+    val workflowExecution = chatUseCase.workflowExecution
 
     init {
         // Initialize with API key from environment

@@ -1,11 +1,14 @@
 package com.pawlowski.io_agents_desktop.ui
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+// Using text icons instead of material icons for compatibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,10 +32,18 @@ fun AiChat(
 ) {
     val viewModel: ChatViewModel = remember { GlobalContext.get().get() }
     var state by remember { mutableStateOf(viewModel.state.value) }
+    var workflowExecution by remember { mutableStateOf(viewModel.workflowExecution.value) }
+    var showWorkflowPanel by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.state.collect { newState ->
             state = newState
+        }
+    }
+    
+    LaunchedEffect(Unit) {
+        viewModel.workflowExecution.collect { execution ->
+            workflowExecution = execution
         }
     }
 
@@ -42,50 +53,110 @@ fun AiChat(
         }
     }
 
-    Column(
-        modifier =
-            modifier
+    Row(
+        modifier = modifier.fillMaxSize(),
+    ) {
+        // Main chat area
+        Column(
+            modifier = Modifier
+                .weight(1f)
                 .fillMaxSize()
                 .padding(16.dp),
-    ) {
-        // Chat messages
-        MessagesList(
-            messages = state.messages,
-            isLoading = state.isLoading,
-            modifier = Modifier.weight(1f),
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Next actions menu (shown when completed)
-        if (state.isCompleted && state.availableNextActions.isNotEmpty()) {
-            NextActionsMenu(
-                actions = state.availableNextActions,
-                onActionSelected = { action ->
-                    if (action is NextAction.Exit) {
-                        onExit()
-                    } else {
-                        viewModel.handleNextAction(action)
-                    }
-                },
+        ) {
+            // Chat messages
+            MessagesList(
+                messages = state.messages,
+                isLoading = state.isLoading,
+                modifier = Modifier.weight(1f),
             )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
 
-        // Input field
-        ChatInput(
-            text = state.inputText,
-            onTextChange = viewModel::updateInputText,
-            onSendClick = viewModel::onSendClick,
-            enabled = !state.isLoading && !state.isCompleted,
-            placeholder =
-                when {
-                    state.isCompleted -> "Wybierz opcję powyżej..."
-                    state.currentClarificationRequest != null -> "Odpowiedz na pytanie..."
-                    state.currentAcceptanceRequest != null -> "Wpisz 'ACCEPT' lub poprawki..."
-                    else -> "Napisz wiadomość..."
-                },
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Next actions menu (shown when completed)
+            if (state.isCompleted && state.availableNextActions.isNotEmpty()) {
+                NextActionsMenu(
+                    actions = state.availableNextActions,
+                    onActionSelected = { action ->
+                        if (action is NextAction.Exit) {
+                            onExit()
+                        } else {
+                            viewModel.handleNextAction(action)
+                        }
+                    },
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Input field
+            ChatInput(
+                text = state.inputText,
+                onTextChange = viewModel::updateInputText,
+                onSendClick = viewModel::onSendClick,
+                enabled = !state.isLoading && !state.isCompleted,
+                placeholder =
+                    when {
+                        state.isCompleted -> "Wybierz opcję powyżej..."
+                        state.currentClarificationRequest != null -> "Odpowiedz na pytanie..."
+                        state.currentAcceptanceRequest != null -> "Wpisz 'ACCEPT' lub poprawki..."
+                        else -> "Napisz wiadomość..."
+                    },
+            )
+        }
+        
+        // Workflow visualization panel
+        WorkflowPanel(
+            isVisible = showWorkflowPanel,
+            execution = workflowExecution,
+            onToggle = { showWorkflowPanel = !showWorkflowPanel },
         )
+    }
+}
+
+@Composable
+private fun WorkflowPanel(
+    isVisible: Boolean,
+    execution: com.pawlowski.io_agents_desktop.data.WorkflowExecution,
+    onToggle: () -> Unit,
+) {
+    val panelWidth = 400.dp
+    val animatedWidth by animateDpAsState(
+        targetValue = if (isVisible) panelWidth else 0.dp,
+        animationSpec = tween(durationMillis = 300),
+        label = "panelWidth",
+    )
+    
+    Row(
+        modifier = Modifier.fillMaxHeight(),
+    ) {
+        // Toggle button
+        FloatingActionButton(
+            onClick = onToggle,
+            modifier = Modifier
+                .padding(8.dp)
+                .align(Alignment.CenterVertically),
+            containerColor = MaterialTheme.colorScheme.secondary,
+        ) {
+            Text(
+                text = if (isVisible) "◄" else "►",
+                style = MaterialTheme.typography.titleLarge,
+            )
+        }
+        
+        // Panel
+        if (animatedWidth > 0.dp) {
+            Surface(
+                modifier = Modifier
+                    .width(animatedWidth)
+                    .fillMaxHeight(),
+                shadowElevation = 4.dp,
+                color = MaterialTheme.colorScheme.surface,
+            ) {
+                WorkflowVisualization(
+                    execution = execution,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
     }
 }
 

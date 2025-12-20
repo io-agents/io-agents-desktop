@@ -13,7 +13,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class AIAgentRepository {
+class AIAgentRepository(
+    private val workflowNodeTracker: WorkflowNodeTracker,
+) {
     private var apiKey: String? = null
     private var strategy: AIAgentGraphStrategy<UseCaseDiagramInput, UseCaseDiagramOutput>? = null
     private var agent: AIAgent<UseCaseDiagramInput, UseCaseDiagramOutput>? = null
@@ -38,7 +40,7 @@ class AIAgentRepository {
         val agentConfig =
             AIAgentConfig(
                 prompt = Prompt.build("mas-io-workflow") {},
-                model = GoogleModels.Gemini2_5FlashLite,
+                model = GoogleModels.Gemini2_5Flash,
                 maxAgentIterations = 30,
             )
 
@@ -52,6 +54,7 @@ class AIAgentRepository {
 
     fun resetAgent() {
         agent = null
+        workflowNodeTracker.reset()
         createNewAgent()
     }
 
