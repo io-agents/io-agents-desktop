@@ -1,13 +1,9 @@
 package com.pawlowski.io_agents_desktop.domain.plantUml
 
 import ai.koog.agents.core.dsl.builder.AIAgentSubgraphBuilderBase
-import com.pawlowski.io_agents_desktop.data.WorkflowNodeTracker
 
-internal fun AIAgentSubgraphBuilderBase<*, *>.diagramErrorCorrectorNode(
-    workflowNodeTracker: WorkflowNodeTracker,
-) =
+internal fun AIAgentSubgraphBuilderBase<*, *>.diagramErrorCorrectorNode() =
     node<Result<String>, String>("diagramCorrector") { result ->
-        workflowNodeTracker.trackNodeExecution("diagramCorrector", "Diagram Corrector")
         result.getOrElse {
             llm.writeSession {
                 updatePrompt {
@@ -19,4 +15,3 @@ internal fun AIAgentSubgraphBuilderBase<*, *>.diagramErrorCorrectorNode(
             }
         }
     }
-

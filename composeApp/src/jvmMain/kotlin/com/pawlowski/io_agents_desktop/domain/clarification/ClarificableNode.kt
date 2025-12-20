@@ -1,7 +1,6 @@
 package com.pawlowski.io_agents_desktop.domain.clarification
 
 import ai.koog.agents.core.dsl.builder.AIAgentSubgraphBuilderBase
-import com.pawlowski.io_agents_desktop.data.WorkflowNodeTracker
 
 const val CLARIFICATION_PREFIX = "<<CLARIFICATION>>"
 
@@ -15,10 +14,8 @@ val CLARIFICATION_SYSTEM_PROMPT =
 
 inline fun <reified Input> AIAgentSubgraphBuilderBase<*, *>.clarificableNode(
     clarificationUseCase: IClarificationUseCase,
-    workflowNodeTracker: WorkflowNodeTracker,
 ) =
     node<Input, String>(name = "ClarificableNode") {
-        workflowNodeTracker.trackNodeExecution("ClarificableNode", "Clarification")
         llm.writeSession {
             updatePrompt {
                 system(CLARIFICATION_SYSTEM_PROMPT)

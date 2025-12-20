@@ -6,7 +6,6 @@ import ai.koog.agents.core.dsl.builder.AIAgentSubgraphBuilderBase
 import ai.koog.agents.core.dsl.builder.AIAgentSubgraphDelegate
 import ai.koog.agents.core.dsl.builder.forwardTo
 import ai.koog.prompt.dsl.prompt
-import com.pawlowski.io_agents_desktop.data.WorkflowNodeTracker
 import com.pawlowski.io_agents_desktop.domain.acceptance.IAcceptance
 import com.pawlowski.io_agents_desktop.domain.acceptance.acceptanceNode
 import com.pawlowski.io_agents_desktop.domain.clarification.IClarificationUseCase
@@ -17,17 +16,16 @@ import com.pawlowski.io_agents_desktop.domain.plantUml.generateUmlImage
 fun AIAgentGraphStrategyBuilder<*, *>.useCaseDiagramSubgraph(
     clarificationUseCase: IClarificationUseCase,
     acceptance: IAcceptance,
-    workflowNodeTracker: WorkflowNodeTracker,
 ): AIAgentSubgraphDelegate<UseCaseDiagramInput, UseCaseDiagramOutput> =
     subgraph<UseCaseDiagramInput, UseCaseDiagramOutput>(
         name = "UseCaseDiagramSubgraph",
         toolSelectionStrategy = ToolSelectionStrategy.NONE,
     ) {
-        val setPromptNode by setUseCasePromptNode(workflowNodeTracker)
-        val clarificationNode by clarificableNode<UseCaseDiagramInput>(clarificationUseCase, workflowNodeTracker)
-        val generateDiagramNode by generateDiagramNode(workflowNodeTracker)
-        val diagramCorrectorNode by diagramErrorCorrectorNode(workflowNodeTracker)
-        val acceptanceNode by acceptanceNode<UseCaseDiagramOutput>(acceptanceUseCase = acceptance, workflowNodeTracker = workflowNodeTracker)
+        val setPromptNode by setUseCasePromptNode()
+        val clarificationNode by clarificableNode<UseCaseDiagramInput>(clarificationUseCase)
+        val generateDiagramNode by generateDiagramNode()
+        val diagramCorrectorNode by diagramErrorCorrectorNode()
+        val acceptanceNode by acceptanceNode<UseCaseDiagramOutput>(acceptanceUseCase = acceptance)
 
         edge(nodeStart forwardTo setPromptNode)
         edge(setPromptNode forwardTo clarificationNode)
@@ -67,11 +65,8 @@ fun AIAgentGraphStrategyBuilder<*, *>.useCaseDiagramSubgraph(
         )
     }
 
-private fun AIAgentSubgraphBuilderBase<*, *>.setUseCasePromptNode(
-    workflowNodeTracker: WorkflowNodeTracker,
-) =
+private fun AIAgentSubgraphBuilderBase<*, *>.setUseCasePromptNode() =
     node<UseCaseDiagramInput, UseCaseDiagramInput>("change_prompt") { input ->
-        workflowNodeTracker.trackNodeExecution("change_prompt", "Change Prompt")
         llm.writeSession {
             rewritePrompt {
                 prompt(id = "Use case diagram subgraph prompt") {
@@ -90,11 +85,8 @@ private fun AIAgentSubgraphBuilderBase<*, *>.setUseCasePromptNode(
         }
     }
 
-private fun AIAgentSubgraphBuilderBase<*, *>.generateDiagramNode(
-    workflowNodeTracker: WorkflowNodeTracker,
-) =
+private fun AIAgentSubgraphBuilderBase<*, *>.generateDiagramNode() =
     node<String, Result<String>>("use_case_diagram_generator") { input ->
-        workflowNodeTracker.trackNodeExecution("use_case_diagram_generator", "Generate Diagram")
         println("Generating diagram...")
         runCatching {
             generateUmlImage(

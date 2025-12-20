@@ -3,10 +3,13 @@ package com.pawlowski.io_agents_desktop.data
 import ai.koog.agents.core.agent.AIAgent
 import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.agents.core.agent.entity.AIAgentGraphStrategy
+import ai.koog.agents.core.feature.handler.agent.AgentCompletedContext
+import ai.koog.agents.core.feature.handler.agent.AgentStartingContext
+import ai.koog.agents.core.feature.handler.node.NodeExecutionStartingContext
+import ai.koog.agents.features.eventHandler.feature.EventHandler
 import ai.koog.prompt.dsl.Prompt
 import ai.koog.prompt.executor.clients.google.GoogleModels
 import ai.koog.prompt.executor.llms.all.simpleGoogleAIExecutor
-import ai.koog.prompt.executor.llms.all.simpleOpenAIExecutor
 import com.pawlowski.io_agents_desktop.domain.useCase.UseCaseDiagramInput
 import com.pawlowski.io_agents_desktop.domain.useCase.UseCaseDiagramOutput
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +52,21 @@ class AIAgentRepository(
                 promptExecutor = promptExecutor,
                 strategy = currentStrategy,
                 agentConfig = agentConfig,
+                installFeatures = {
+                    install(EventHandler) {
+                        onAgentStarting { _: AgentStartingContext<*> ->
+                            workflowNodeTracker.trackNodeExecution("start", "Start")
+                        }
+                        onAgentCompleted { _: AgentCompletedContext ->
+                            workflowNodeTracker.trackNodeExecution("finish", "Finish")
+                        }
+                        onNodeExecutionStarting { context: NodeExecutionStartingContext ->
+                            val nodeId = context.node.id
+                            val nodeName = context.node.name
+                            workflowNodeTracker.trackNodeExecution(nodeId, nodeName)
+                        }
+                    }
+                },
             )
     }
 

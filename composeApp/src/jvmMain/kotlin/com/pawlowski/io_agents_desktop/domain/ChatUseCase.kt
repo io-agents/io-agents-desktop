@@ -20,7 +20,6 @@ class ChatUseCase(
             mainStrategy(
                 clarificationUseCase = clarificationRepository,
                 acceptance = acceptanceRepository,
-                workflowNodeTracker = workflowNodeTracker,
             )
         agentRepository.initialize(apiKey, strategy)
     }
