@@ -581,14 +581,30 @@ private fun LLMCallCard(
                 // System prompt section
                 if (call.systemMessages.isNotEmpty()) {
                     Text(
-                        text = "System Prompt:",
+                        text = "System Prompt${if (call.systemMessages.size > 1) "s" else ""}:",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     call.systemMessages.forEachIndexed { index, message ->
                         if (index > 0) {
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
+                            // Visual separator between multiple system prompts
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = 4.dp),
+                                thickness = 1.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        // Add label for multiple system prompts
+                        if (call.systemMessages.size > 1) {
+                            Text(
+                                text = "System Prompt #${index + 1}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
                         }
                         Surface(
                             modifier =
@@ -620,14 +636,30 @@ private fun LLMCallCard(
                 // User messages section
                 if (call.userMessages.isNotEmpty()) {
                     Text(
-                        text = "User Messages:",
+                        text = "User Message${if (call.userMessages.size > 1) "s" else ""}:",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     call.userMessages.forEachIndexed { index, message ->
                         if (index > 0) {
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
+                            // Visual separator between multiple user messages
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = 4.dp),
+                                thickness = 1.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        // Add label for multiple user messages
+                        if (call.userMessages.size > 1) {
+                            Text(
+                                text = "User Message #${index + 1}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
                         }
                         Surface(
                             modifier =
@@ -657,31 +689,57 @@ private fun LLMCallCard(
                 }
 
                 // Response section
-                Text(
-                    text = "Response:",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Surface(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 200.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = MaterialTheme.shapes.small,
-                ) {
-                    Box(
+                if (call.isCompleted) {
+                    Text(
+                        text = "Response:",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .verticalScroll(rememberScrollState())
-                                .padding(12.dp),
+                                .heightIn(max = 200.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.small,
                     ) {
-                        SelectionContainer {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(12.dp),
+                        ) {
+                            SelectionContainer {
+                                Text(
+                                    text = call.response,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Show loading indicator if response is not yet available
+                    Surface(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 200.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = MaterialTheme.shapes.small,
+                    ) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
                             Text(
-                                text = call.response,
+                                text = "Waiting for response...",
                                 style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             )
                         }
                     }

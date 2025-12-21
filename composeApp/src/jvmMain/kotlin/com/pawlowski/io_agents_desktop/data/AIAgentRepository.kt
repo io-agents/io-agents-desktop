@@ -6,6 +6,7 @@ import ai.koog.agents.core.agent.entity.AIAgentGraphStrategy
 import ai.koog.agents.core.feature.handler.agent.AgentCompletedContext
 import ai.koog.agents.core.feature.handler.agent.AgentStartingContext
 import ai.koog.agents.core.feature.handler.llm.LLMCallCompletedContext
+import ai.koog.agents.core.feature.handler.llm.LLMCallStartingContext
 import ai.koog.agents.core.feature.handler.node.NodeExecutionStartingContext
 import ai.koog.agents.features.eventHandler.feature.EventHandler
 import ai.koog.prompt.dsl.Prompt
@@ -66,6 +67,42 @@ class AIAgentRepository(
                             val nodeId = context.node.id
                             val nodeName = context.node.name
                             workflowNodeTracker.trackNodeExecution(nodeId, nodeName)
+                        }
+                        onLLMCallStarting { context: LLMCallStartingContext ->
+                            // Get the last executed node (the one that is making the LLM call)
+                            val nodeId =
+                                workflowNodeTracker.execution.value.nodes
+                                    .lastOrNull()
+                                    ?.id
+
+                            if (nodeId != null) {
+                                // Extract prompt structure from context.prompt.messages
+                                val systemMessages = mutableListOf<String>()
+                                val userMessages = mutableListOf<String>()
+
+                                context.prompt.messages.forEach { message ->
+                                    when (message) {
+                                        is Message.System -> systemMessages.add(message.content)
+                                        is Message.User -> userMessages.add(message.content)
+                                        is Message.Assistant -> {
+                                            // Skip assistant messages in prompt
+                                        }
+                                        is Message.Tool.Call -> {
+                                            // Skip tool calls in prompt
+                                        }
+                                        is Message.Tool.Result -> {
+                                            // Skip tool results in prompt
+                                        }
+                                    }
+                                }
+
+                                // Track LLM call with prompt but without response yet (will be updated in onLLMCallCompleted)
+                                workflowNodeTracker.trackLLMCallStarting(
+                                    nodeId = nodeId,
+                                    systemMessages = systemMessages,
+                                    userMessages = userMessages,
+                                )
+                            }
                         }
                         onLLMCallCompleted { context: LLMCallCompletedContext ->
                             // Get the last executed node (the one that made the LLM call)

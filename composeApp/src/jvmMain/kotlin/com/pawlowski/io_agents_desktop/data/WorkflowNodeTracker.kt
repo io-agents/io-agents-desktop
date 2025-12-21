@@ -7,9 +7,15 @@ import kotlinx.coroutines.flow.asStateFlow
 data class LLMCallInfo(
     val systemMessages: List<String> = emptyList(),
     val userMessages: List<String> = emptyList(),
-    val response: String,
+    val response: String = "",
     val timestamp: Long = System.currentTimeMillis(),
-)
+) {
+    val isCompleted: Boolean get() = response.isNotEmpty()
+    
+    fun withResponse(newResponse: String): LLMCallInfo {
+        return copy(response = newResponse)
+    }
+}
 
 data class WorkflowNode(
     val id: String,
@@ -58,6 +64,48 @@ class WorkflowNodeTracker {
         _execution.value = updated
     }
 
+    fun trackLLMCallStarting(
+        nodeId: String,
+        systemMessages: List<String>,
+        userMessages: List<String>,
+    ) {
+        val current = _execution.value
+        // Find the last occurrence of the node (most recently added) to handle repeated nodes
+        val nodeIndex = current.nodes.indexOfLast { it.id == nodeId }
+        if (nodeIndex >= 0) {
+            val node = current.nodes[nodeIndex]
+            // Check if there's already an incomplete call (without response)
+            val incompleteCallIndex = node.llmCalls.indexOfLast { !it.isCompleted }
+            if (incompleteCallIndex >= 0) {
+                // Update existing incomplete call with new prompt
+                val existingCall = node.llmCalls[incompleteCallIndex]
+                val updatedCall = existingCall.copy(
+                    systemMessages = systemMessages,
+                    userMessages = userMessages,
+                )
+                val updatedCalls = node.llmCalls.toMutableList()
+                updatedCalls[incompleteCallIndex] = updatedCall
+                val updatedNode = node.copy(llmCalls = updatedCalls)
+                val updatedNodes = current.nodes.toMutableList()
+                updatedNodes[nodeIndex] = updatedNode
+                _execution.value = current.copy(nodes = updatedNodes)
+            } else {
+                // Create new incomplete call
+                val updatedNode =
+                    node.addLLMCall(
+                        LLMCallInfo(
+                            systemMessages = systemMessages,
+                            userMessages = userMessages,
+                            response = "", // Empty response - will be filled in trackLLMCall
+                        ),
+                    )
+                val updatedNodes = current.nodes.toMutableList()
+                updatedNodes[nodeIndex] = updatedNode
+                _execution.value = current.copy(nodes = updatedNodes)
+            }
+        }
+    }
+
     fun trackLLMCall(
         nodeId: String,
         systemMessages: List<String>,
@@ -69,17 +117,32 @@ class WorkflowNodeTracker {
         val nodeIndex = current.nodes.indexOfLast { it.id == nodeId }
         if (nodeIndex >= 0) {
             val node = current.nodes[nodeIndex]
-            val updatedNode =
-                node.addLLMCall(
-                    LLMCallInfo(
-                        systemMessages = systemMessages,
-                        userMessages = userMessages,
-                        response = response,
-                    ),
-                )
-            val updatedNodes = current.nodes.toMutableList()
-            updatedNodes[nodeIndex] = updatedNode
-            _execution.value = current.copy(nodes = updatedNodes)
+            // Find the last incomplete call (without response) and update it
+            val incompleteCallIndex = node.llmCalls.indexOfLast { !it.isCompleted }
+            if (incompleteCallIndex >= 0) {
+                // Update existing incomplete call with response
+                val existingCall = node.llmCalls[incompleteCallIndex]
+                val updatedCall = existingCall.withResponse(response)
+                val updatedCalls = node.llmCalls.toMutableList()
+                updatedCalls[incompleteCallIndex] = updatedCall
+                val updatedNode = node.copy(llmCalls = updatedCalls)
+                val updatedNodes = current.nodes.toMutableList()
+                updatedNodes[nodeIndex] = updatedNode
+                _execution.value = current.copy(nodes = updatedNodes)
+            } else {
+                // No incomplete call found - create new one (shouldn't happen if onLLMCallStarting was called)
+                val updatedNode =
+                    node.addLLMCall(
+                        LLMCallInfo(
+                            systemMessages = systemMessages,
+                            userMessages = userMessages,
+                            response = response,
+                        ),
+                    )
+                val updatedNodes = current.nodes.toMutableList()
+                updatedNodes[nodeIndex] = updatedNode
+                _execution.value = current.copy(nodes = updatedNodes)
+            }
         }
     }
 
