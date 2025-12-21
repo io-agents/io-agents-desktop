@@ -11,6 +11,7 @@ import ai.koog.agents.features.eventHandler.feature.EventHandler
 import ai.koog.prompt.dsl.Prompt
 import ai.koog.prompt.executor.clients.google.GoogleModels
 import ai.koog.prompt.executor.llms.all.simpleGoogleAIExecutor
+import ai.koog.prompt.message.Message
 import com.pawlowski.io_agents_desktop.domain.useCase.UseCaseDiagramInput
 import com.pawlowski.io_agents_desktop.domain.useCase.UseCaseDiagramOutput
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,13 +75,37 @@ class AIAgentRepository(
                                     ?.id
 
                             if (nodeId != null) {
-                                val prompt = context.prompt.toString()
+                                // Extract prompt structure from context.prompt.messages
+                                val systemMessages = mutableListOf<String>()
+                                val userMessages = mutableListOf<String>()
+
+                                context.prompt.messages.forEach { message ->
+                                    when (message) {
+                                        is Message.System -> systemMessages.add(message.content)
+                                        is Message.User -> userMessages.add(message.content)
+                                        is Message.Assistant -> {
+                                            // Skip assistant messages in prompt
+                                        }
+                                        is Message.Tool.Call -> {
+                                            // Skip tool calls in prompt
+                                        }
+                                        is Message.Tool.Result -> {
+                                            // Skip tool results in prompt
+                                        }
+                                    }
+                                }
+
                                 // Get the first response or combine all responses
                                 val response =
                                     context.responses.firstOrNull()?.content
                                         ?: context.responses.joinToString("\n\n") { it.content }
 
-                                workflowNodeTracker.trackLLMCall(nodeId, prompt, response)
+                                workflowNodeTracker.trackLLMCall(
+                                    nodeId = nodeId,
+                                    systemMessages = systemMessages,
+                                    userMessages = userMessages,
+                                    response = response,
+                                )
                             }
                         }
                     }
