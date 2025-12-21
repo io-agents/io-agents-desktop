@@ -5,6 +5,7 @@ import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.agents.core.agent.entity.AIAgentGraphStrategy
 import ai.koog.agents.core.feature.handler.agent.AgentCompletedContext
 import ai.koog.agents.core.feature.handler.agent.AgentStartingContext
+import ai.koog.agents.core.feature.handler.llm.LLMCallCompletedContext
 import ai.koog.agents.core.feature.handler.node.NodeExecutionStartingContext
 import ai.koog.agents.features.eventHandler.feature.EventHandler
 import ai.koog.prompt.dsl.Prompt
@@ -64,6 +65,23 @@ class AIAgentRepository(
                             val nodeId = context.node.id
                             val nodeName = context.node.name
                             workflowNodeTracker.trackNodeExecution(nodeId, nodeName)
+                        }
+                        onLLMCallCompleted { context: LLMCallCompletedContext ->
+                            // Get the last executed node (the one that made the LLM call)
+                            val nodeId =
+                                workflowNodeTracker.execution.value.nodes
+                                    .lastOrNull()
+                                    ?.id
+
+                            if (nodeId != null) {
+                                val prompt = context.prompt.toString()
+                                // Get the first response or combine all responses
+                                val response =
+                                    context.responses.firstOrNull()?.content
+                                        ?: context.responses.joinToString("\n\n") { it.content }
+
+                                workflowNodeTracker.trackLLMCall(nodeId, prompt, response)
+                            }
                         }
                     }
                 },

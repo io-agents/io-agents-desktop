@@ -13,7 +13,7 @@ class ChatUseCase(
     private val agentRepository: AIAgentRepository,
     private val clarificationRepository: ClarificationRepository,
     private val acceptanceRepository: AcceptanceRepository,
-    private val workflowNodeTracker: WorkflowNodeTracker,
+    workflowNodeTracker: WorkflowNodeTracker,
 ) {
     fun initialize(apiKey: String) {
         val strategy =
