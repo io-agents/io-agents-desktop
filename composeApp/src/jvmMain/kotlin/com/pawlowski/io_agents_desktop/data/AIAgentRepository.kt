@@ -23,14 +23,14 @@ class AIAgentRepository(
     private val workflowNodeTracker: WorkflowNodeTracker,
 ) {
     private var apiKey: String? = null
-    private var strategy: AIAgentGraphStrategy<UseCaseDiagramInput, UseCaseDiagramOutput>? = null
-    private var agent: AIAgent<UseCaseDiagramInput, UseCaseDiagramOutput>? = null
+    private var strategy: AIAgentGraphStrategy<String, String>? = null
+    private var agent: AIAgent<String, String>? = null
     private val _isProcessing = MutableStateFlow(false)
     val isProcessing: StateFlow<Boolean> = _isProcessing.asStateFlow()
 
     fun initialize(
         apiKey: String,
-        strategy: AIAgentGraphStrategy<UseCaseDiagramInput, UseCaseDiagramOutput>,
+        strategy: AIAgentGraphStrategy<String, String>,
     ) {
         this.apiKey = apiKey
         this.strategy = strategy
@@ -47,7 +47,7 @@ class AIAgentRepository(
             AIAgentConfig(
                 prompt = Prompt.build("mas-io-workflow") {},
                 model = GoogleModels.Gemini2_5Flash,
-                maxAgentIterations = 30,
+                maxAgentIterations = 100,
             )
 
         agent =
@@ -156,7 +156,7 @@ class AIAgentRepository(
         createNewAgent()
     }
 
-    suspend fun runAgent(input: UseCaseDiagramInput): Result<UseCaseDiagramOutput> {
+    suspend fun runAgent(input: String): Result<String> {
         val currentAgent = agent ?: return Result.failure(IllegalStateException("Agent not initialized"))
 
         return try {

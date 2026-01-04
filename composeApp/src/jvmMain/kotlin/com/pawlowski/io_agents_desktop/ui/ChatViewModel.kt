@@ -26,7 +26,7 @@ data class ChatMessage(
 data class ChatState(
     val messages: List<ChatMessage> = listOf(
         ChatMessage(
-            text = "Cześć! 👋 Jestem Twoim asystentem do tworzenia diagramów przypadków użycia.\n\nMogę pomóc Ci:\n• Stworzyć diagram przypadków użycia na podstawie opisu\n• Wyjaśnić niejasności w wymaganiach\n• Wygenerować kod PlantUML\n\nCo chciałbyś zrobić? Opisz swój projekt lub wymagania, a ja pomogę Ci stworzyć odpowiedni diagram!",
+            text = "Cześć! 👋 Jestem Twoim asystentem do generacji modeli opisu oprogramowania. \n\nMogę pomóc Ci:\n• Stworzyć diagram przypadków użycia na podstawie opisu\n• Wyjaśnić niejasności w wymaganiach\n• Wygenerować kod PlantUML\n• Wyciągnąć scenariusze i aktywności\n• Zamodelować diagram aktywności \n\n Co chciałbyś zrobić? Opisz swój projekt lub wymagania, a ja pomogę Ci zamodelować co zechcesz!",
             isUser = false,
         ),
     ),
@@ -34,8 +34,9 @@ data class ChatState(
     val currentClarificationRequest: String? = null,
     val currentAcceptanceRequest: String? = null,
     val inputText: String = "",
-    val isCompleted: Boolean = false,
+    val isCompleted: Boolean = true, // blocks writing during selection
     val availableNextActions: List<NextAction> = emptyList(),
+    val diagramLevel: Int = 0,
 )
 
 class ChatViewModel(
@@ -52,9 +53,13 @@ class ChatViewModel(
     // Workflow execution state
     val workflowExecution = chatUseCase.workflowExecution
 
+    // API key
+    private val apiKey = System.getenv("GOOGLE_API_KEY") ?: ""
+    
+    private val maxDiagramLevel = 3
+
     init {
         // Initialize with API key from environment
-        val apiKey = System.getenv("GOOGLE_API_KEY") ?: ""
         if (apiKey.isNotEmpty()) {
             chatUseCase.initialize(apiKey)
         }
@@ -67,7 +72,7 @@ class ChatViewModel(
                         currentClarificationRequest = request,
                         isLoading = false, // Stop loading when waiting for user clarification
                         messages = currentState.messages + ChatMessage(
-                            text = "🤔 Zanim przejdę dalej, chciałbym lepiej zrozumieć Twoje wymagania:\n\n$request\n\nProszę, odpowiedz na te pytania, żebym mógł stworzyć dokładniejszy diagram.",
+                            text = "🤔 Zanim przejdę dalej, chciałbym lepiej zrozumieć Twoje wymagania:\n\n$request\n\nProszę, odpowiedz na te pytania, żebym mógł stworzyć dokładniejszy model.",
                             isUser = false,
                         ),
                     )
@@ -80,20 +85,21 @@ class ChatViewModel(
             .onEach { request ->
                 // Diagram should already be saved at this point (generated in generateDiagramNode)
                 // Use the standard path where diagram is saved
-                val diagramPath = "use_case_diagram.png"
-                lastDiagramPath = diagramPath
+                val diagramPath = if (_state.value.diagramLevel == 1) "use_case_diagram.png" else null // diffrent behaviour only for UCD
+                val isDiagram = if (_state.value.diagramLevel == 1) "diagram" else "model"
                 
                 _state.update { currentState ->
-                    currentState.copy(
+                        currentState.copy(
                         currentAcceptanceRequest = request,
                         isLoading = false, // Stop loading when waiting for user acceptance
                         messages = currentState.messages + ChatMessage(
-                            text = "✅ Stworzyłem diagram! Sprawdź proszę powyżej.\n\nJeśli wszystko wygląda dobrze, napisz 'ACCEPT'. Jeśli chcesz coś zmienić, opisz co dokładnie.",
+                            text = "✅ Stworzyłem $isDiagram! Sprawdź proszę powyżej.\n\nJeśli wszystko wygląda dobrze, napisz 'ACCEPT'. Jeśli chcesz coś zmienić, opisz co dokładnie. \n$request",
                             isUser = false,
                             diagramImagePath = diagramPath, // Show the diagram in acceptance request
                         ),
                     )
                 }
+                lastDiagramPath = diagramPath
             }
             .launchIn(viewModelScope)
 
@@ -120,12 +126,11 @@ class ChatViewModel(
             val result = chatUseCase.processMessage(text)
             result.fold(
                 onSuccess = { output ->
-                    val diagramPath = "use_case_diagram.png"
-                    lastDiagramPath = diagramPath
+                    val diagramPath = lastDiagramPath
                     _state.update { currentState ->
                         currentState.copy(
                             messages = currentState.messages + ChatMessage(
-                                text = "🎉 Diagram został wygenerowany pomyślnie!",
+                                text = "🎉 Model został wygenerowany pomyślnie!",
                                 isUser = false,
                                 diagramImagePath = diagramPath,
                             ),
@@ -190,13 +195,15 @@ class ChatViewModel(
     }
     
     private fun showCompletionMenu() {
+        val actions = if (state.value.diagramLevel < maxDiagramLevel) NextAction.allActions else NextAction.endActions
+
         _state.update { currentState ->
             val menuText = buildString {
-                appendLine("✅ Diagram został zaakceptowany!")
+                appendLine("✅ Model został zaakceptowany!")
                 appendLine()
                 appendLine("Co chciałbyś zrobić dalej?")
                 appendLine()
-                NextAction.allActions.forEachIndexed { index, action ->
+                actions.forEachIndexed { index, action ->
                     appendLine("${index + 1}. ${action.displayText} - ${action.description}")
                 }
             }
@@ -207,8 +214,82 @@ class ChatViewModel(
                     isUser = false,
                 ),
                 isCompleted = true,
-                availableNextActions = NextAction.allActions,
+                availableNextActions = actions,
             )
+        }
+    }
+
+    private fun showSelectionMenu() {
+        _state.update { currentState ->
+            val menuText = buildString {
+                appendLine("Witaj ponownie! Co chciałbyś zrobić?")
+                appendLine()
+                StartGraph.allActions.forEachIndexed { index, action ->
+                    appendLine("${index + 1}. ${action.displayText} - ${action.description}")
+                }
+            }
+            
+            currentState.copy(
+                messages = currentState.messages + ChatMessage(
+                    text = menuText,
+                    isUser = false,
+                ),
+                isCompleted = false,
+                availableNextActions = emptyList(),
+            )
+        }
+    }
+
+    fun handleStartGraphSelection(action: StartGraph) {
+        when (action) {
+            is StartGraph.UCD -> {
+                // Reset agent and start UCD workflow
+                chatUseCase.initialize(apiKey, 1)
+                chatUseCase.resetAgent()
+                _state.update { currentState ->
+                    currentState.copy(
+                        isCompleted = false,
+                        availableNextActions = emptyList(),
+                        messages = currentState.messages + ChatMessage(
+                            text = "Świetnie! Stwórzmy diagram przypadków użycia. Opisz proszę, jaki diagram chciałbyś wygenerować.",
+                            isUser = false,
+                        ),
+                        diagramLevel = 1,
+                    )
+                }
+            }
+            is StartGraph.SAD -> {
+                // Reset agent and start SAD workflow
+                chatUseCase.initialize(apiKey, 2)
+                chatUseCase.resetAgent()
+                _state.update { currentState ->
+                    currentState.copy(
+                        isCompleted = false,
+                        availableNextActions = emptyList(),
+                        messages = currentState.messages + ChatMessage(
+                            text = "Świetnie! Wyciągnijmy scenariusze i aktywności z diagramu przypadków użycia. Proszę, podaj opis diagramu przypadków użycia.",
+                            isUser = false,
+                        ),
+                        diagramLevel = 2,
+                    )
+                }
+            }
+            is StartGraph.ADM -> {
+                // Reset agent and start ADM workflow
+                chatUseCase.initialize(apiKey, 3)
+                chatUseCase.resetAgent()
+                _state.update { currentState ->
+                    currentState.copy(
+                        isCompleted = false,
+                        availableNextActions = emptyList(),
+                        messages = currentState.messages + ChatMessage(
+                            text = "Świetnie! Stwórzmy diagram aktywności. Proszę, podaj opis scenariuszy i aktywności.",
+                            isUser = false,
+                        ),
+                        diagramLevel = 3,
+                    )
+                }
+            }
         }
     }
     
@@ -219,12 +300,13 @@ class ChatViewModel(
                 chatUseCase.resetAgent()
                 _state.update { currentState ->
                     currentState.copy(
-                        isCompleted = false,
+                        isCompleted = true, // blocks writing during selection
                         availableNextActions = emptyList(),
                         messages = currentState.messages + ChatMessage(
-                            text = "Świetnie! Stwórzmy nowy diagram. Opisz proszę, jaki diagram przypadków użycia chciałbyś wygenerować.",
+                            text = "Świetnie! Stwórzmy nowy model.",
                             isUser = false,
                         ),
+                        diagramLevel = 0,
                     )
                 }
             }
@@ -236,6 +318,20 @@ class ChatViewModel(
                             text = "Dziękuję za korzystanie z aplikacji! Do widzenia! 👋",
                             isUser = false,
                         ),
+                    )
+                }
+            }
+            is NextAction.Continue -> {
+                _state.update { currentState ->
+                    currentState.copy(
+                        isCompleted = false,
+                        availableNextActions = emptyList(),
+                        isLoading = true,
+                        messages = currentState.messages + ChatMessage(
+                            text = "Świetnie! Kontynuujmy do następnego etapu.",
+                            isUser = false,
+                        ),
+                        diagramLevel = currentState.diagramLevel + 1,
                     )
                 }
             }

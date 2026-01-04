@@ -72,6 +72,17 @@ fun AiChat(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Start selection menu
+            if (state.diagramLevel == 0) {
+                GraphSelectionMenu(
+                    actions = StartGraph.allActions,
+                    onActionSelected = { action ->
+                        viewModel.handleStartGraphSelection(action)
+                    },
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             // Next actions menu (shown when completed)
             if (state.isCompleted && state.availableNextActions.isNotEmpty()) {
                 NextActionsMenu(
@@ -321,6 +332,52 @@ private fun NextActionsMenu(
     ) {
         Text(
             text = "Wybierz akcję:",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
+
+        actions.forEach { action ->
+            Card(
+                onClick = { onActionSelected(action) },
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                ) {
+                    Text(
+                        text = action.displayText,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    )
+                    Text(
+                        text = action.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GraphSelectionMenu(
+    actions: List<StartGraph>,
+    onActionSelected: (StartGraph) -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = "Wybierz punkt startowy diagramu:",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(bottom = 4.dp),
         )

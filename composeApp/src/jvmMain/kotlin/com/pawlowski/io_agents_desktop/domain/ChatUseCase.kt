@@ -15,17 +15,18 @@ class ChatUseCase(
     private val acceptanceRepository: AcceptanceRepository,
     workflowNodeTracker: WorkflowNodeTracker,
 ) {
-    fun initialize(apiKey: String) {
+    fun initialize(apiKey: String, startState: Int = 1) {
         val strategy =
             mainStrategy(
                 clarificationUseCase = clarificationRepository,
                 acceptance = acceptanceRepository,
+                startState = startState,
             )
         agentRepository.initialize(apiKey, strategy)
     }
 
-    suspend fun processMessage(userMessage: String): Result<UseCaseDiagramOutput> {
-        val input = UseCaseDiagramInput(plainTextUseCaseDescription = userMessage)
+    suspend fun processMessage(userMessage: String): Result<String> {
+        val input = userMessage
         return agentRepository.runAgent(input)
     }
 
