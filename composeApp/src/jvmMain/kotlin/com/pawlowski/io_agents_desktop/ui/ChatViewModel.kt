@@ -33,10 +33,12 @@ data class ChatState(
     val isLoading: Boolean = false,
     val currentClarificationRequest: String? = null,
     val currentAcceptanceRequest: String? = null,
+    val currentSelectionRequest: Unit? = null,
     val inputText: String = "",
     val isCompleted: Boolean = true, // blocks writing during selection
     val availableNextActions: List<NextAction> = emptyList(),
     val diagramLevel: Int = 0,
+    val cont: Boolean = false,
 )
 
 class ChatViewModel(
@@ -100,6 +102,16 @@ class ChatViewModel(
                     )
                 }
                 lastDiagramPath = diagramPath
+            }
+            .launchIn(viewModelScope)
+        
+        chatUseCase.observeSelectionRequests()
+            .onEach {request ->
+                _state.update { currentState ->
+                        currentState.copy(
+                            currentSelectionRequest = request,
+                    )
+                }
             }
             .launchIn(viewModelScope)
 
@@ -183,7 +195,6 @@ class ChatViewModel(
                 isLoading = !isAccepted, // Only resume loading if not accepted (will need corrections)
             )
         }
-
         viewModelScope.launch {
             chatUseCase.handleAcceptance(text)
             
@@ -191,6 +202,23 @@ class ChatViewModel(
             if (isAccepted) {
                 showCompletionMenu()
             }
+        }
+    }
+
+    fun handleSelectionResponse() {
+        val currentState = _state.value  // read current state
+        if (!currentState.cont) return 
+        
+
+        _state.update { currentState ->
+            currentState.copy(
+                cont = false,
+                currentSelectionRequest = null,
+            )
+        }
+
+        viewModelScope.launch {
+            chatUseCase.handleSelection(Unit)
         }
     }
     
@@ -332,6 +360,7 @@ class ChatViewModel(
                             isUser = false,
                         ),
                         diagramLevel = currentState.diagramLevel + 1,
+                        cont = true,
                     )
                 }
             }
@@ -350,6 +379,9 @@ class ChatViewModel(
             }
             currentState.currentAcceptanceRequest != null -> {
                 handleAcceptanceResponse(currentState.inputText)
+            }
+            currentState.cont -> {
+                handleSelectionResponse()
             }
             else -> {
                 sendMessage(currentState.inputText)

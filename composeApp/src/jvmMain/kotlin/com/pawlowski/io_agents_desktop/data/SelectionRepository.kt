@@ -7,18 +7,17 @@ import kotlinx.coroutines.flow.receiveAsFlow
 
 // Setup in case we need more complex subgraph transition logic in the future
 class SelectionRepository : ISelection {
+    private val graphFlowRequest = Channel<Unit>(Channel.RENDEZVOUS)
+    private val graphFlowResponse = Channel<Unit>(Channel.RENDEZVOUS)
 
-    private val graphFlowRequest = Channel<Unit>(Channel.BUFFERED)
-    private val graphFlowResponse = Channel<Unit>(Channel.BUFFERED)
-
-    override suspend fun requestGraphFlow(): Unit {
+    override suspend fun requestGraphFlow() {
         graphFlowRequest.send(Unit)
-        return graphFlowResponse.receive()
+        graphFlowResponse.receive()
     }
 
     override fun observeGraphFlow(): Flow<Unit> = graphFlowRequest.receiveAsFlow()
 
     override suspend fun handleGraphFlow(index: Unit) {
-        graphFlowResponse.send(index)
+        graphFlowResponse.send(Unit)
     }
 }

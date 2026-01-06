@@ -3,6 +3,7 @@ package com.pawlowski.io_agents_desktop.domain
 import com.pawlowski.io_agents_desktop.data.AIAgentRepository
 import com.pawlowski.io_agents_desktop.data.AcceptanceRepository
 import com.pawlowski.io_agents_desktop.data.ClarificationRepository
+import com.pawlowski.io_agents_desktop.data.SelectionRepository
 import com.pawlowski.io_agents_desktop.data.WorkflowNodeTracker
 import com.pawlowski.io_agents_desktop.domain.useCase.UseCaseDiagramInput
 import com.pawlowski.io_agents_desktop.domain.useCase.UseCaseDiagramOutput
@@ -13,6 +14,7 @@ class ChatUseCase(
     private val agentRepository: AIAgentRepository,
     private val clarificationRepository: ClarificationRepository,
     private val acceptanceRepository: AcceptanceRepository,
+    private val selectionRepository: SelectionRepository,
     workflowNodeTracker: WorkflowNodeTracker,
 ) {
     fun initialize(apiKey: String, startState: Int = 1) {
@@ -20,6 +22,7 @@ class ChatUseCase(
             mainStrategy(
                 clarificationUseCase = clarificationRepository,
                 acceptance = acceptanceRepository,
+                selection = selectionRepository,
                 startState = startState,
             )
         agentRepository.initialize(apiKey, strategy)
@@ -36,6 +39,8 @@ class ChatUseCase(
 
     fun observeAcceptanceRequests(): Flow<String> = acceptanceRepository.observeAcceptenceRequests()
 
+    fun observeSelectionRequests(): Flow<Unit> = selectionRepository.observeGraphFlow()
+
     suspend fun handleClarification(clarification: String) {
         clarificationRepository.handleUserClarification(clarification)
     }
@@ -44,6 +49,10 @@ class ChatUseCase(
         acceptanceRepository.handleAcceptence(acceptance)
     }
 
+    suspend fun handleSelection(index: Unit) {
+        selectionRepository.handleGraphFlow(index)
+    }
+    
     fun resetAgent() {
         agentRepository.resetAgent()
     }

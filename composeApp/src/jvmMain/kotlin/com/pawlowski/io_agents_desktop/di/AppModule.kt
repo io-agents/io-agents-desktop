@@ -3,6 +3,7 @@ package com.pawlowski.io_agents_desktop.di
 import com.pawlowski.io_agents_desktop.data.AcceptanceRepository
 import com.pawlowski.io_agents_desktop.data.AIAgentRepository
 import com.pawlowski.io_agents_desktop.data.ClarificationRepository
+import com.pawlowski.io_agents_desktop.data.SelectionRepository
 import com.pawlowski.io_agents_desktop.data.WorkflowNodeTracker
 import com.pawlowski.io_agents_desktop.domain.ChatUseCase
 import com.pawlowski.io_agents_desktop.ui.ChatViewModel
@@ -14,6 +15,7 @@ val dataModule = module {
     singleOf(::AIAgentRepository)
     singleOf(::ClarificationRepository)
     singleOf(::AcceptanceRepository)
+    singleOf(::SelectionRepository)
 }
 
 val domainModule = module {

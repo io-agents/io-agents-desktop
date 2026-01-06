@@ -94,6 +94,7 @@ fun AiChat(
                             viewModel.handleNextAction(action)
                         }
                     },
+                    onSendClick = viewModel::onSendClick,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -322,6 +323,7 @@ private fun LoadingIndicator() {
 private fun NextActionsMenu(
     actions: List<NextAction>,
     onActionSelected: (NextAction) -> Unit,
+    onSendClick: () -> Unit,
 ) {
     Column(
         modifier =
@@ -338,7 +340,10 @@ private fun NextActionsMenu(
 
         actions.forEach { action ->
             Card(
-                onClick = { onActionSelected(action) },
+                onClick = { 
+                    onActionSelected(action)
+                    onSendClick()
+                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors =
                     CardDefaults.cardColors(

@@ -12,10 +12,13 @@ import com.pawlowski.io_agents_desktop.domain.SAD.SADOutput
 import com.pawlowski.io_agents_desktop.domain.ADM.ADMDiagramSubgraph
 import com.pawlowski.io_agents_desktop.domain.ADM.ADMInput
 import com.pawlowski.io_agents_desktop.domain.ADM.ADMOutput
+import com.pawlowski.io_agents_desktop.domain.selection.ISelection
+import com.pawlowski.io_agents_desktop.domain.selection.graphFlowNode
 
 fun mainStrategy(
     clarificationUseCase: IClarificationUseCase,
     acceptance: IAcceptance,
+    selection: ISelection,
     startState: Int,
 ) = strategy<String, String>("MAS-workflow") {
     val useCaseDiagramSubgraph by useCaseDiagramSubgraph(
@@ -65,11 +68,15 @@ fun mainStrategy(
         )
     }
 
+    val contiuationSelectionNodeP1 by graphFlowNode<SADInput>(selection)
+    val contiuationSelectionNodeP2 by graphFlowNode<ADMInput>(selection)
+
     if (startState == 1){
         nodeStart then startTransferUCD then useCaseDiagramSubgraph then UCDtransferSAD then 
-        sadSubgraph then SADtransferADM then ADMSubgraph then finishTransfer then  nodeFinish
+        contiuationSelectionNodeP1 then sadSubgraph then SADtransferADM then contiuationSelectionNodeP2 then 
+        ADMSubgraph then finishTransfer then  nodeFinish
     } else if (startState == 2){
-        nodeStart then startTransferSAD then sadSubgraph then SADtransferADM then 
+        nodeStart then startTransferSAD then sadSubgraph then SADtransferADM then contiuationSelectionNodeP2 then 
         ADMSubgraph then finishTransfer then nodeFinish
     } else {
         nodeStart then startTransferADM then ADMSubgraph then finishTransfer then nodeFinish
