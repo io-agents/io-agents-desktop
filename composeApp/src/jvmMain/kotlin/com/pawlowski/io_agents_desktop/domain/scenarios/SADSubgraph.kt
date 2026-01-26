@@ -10,6 +10,7 @@ import com.pawlowski.io_agents_desktop.domain.acceptance.IAcceptance
 import com.pawlowski.io_agents_desktop.domain.acceptance.acceptanceNode
 import com.pawlowski.io_agents_desktop.domain.clarification.IClarificationUseCase
 import com.pawlowski.io_agents_desktop.domain.clarification.clarificableNode
+import com.pawlowski.io_agents_desktop.domain.critics.criticNode
 
 fun AIAgentGraphStrategyBuilder<*, *>.SADDiagramSubgraph(
     clarification: IClarificationUseCase,
@@ -24,6 +25,12 @@ fun AIAgentGraphStrategyBuilder<*, *>.SADDiagramSubgraph(
         val clarificationNodeScenarios by clarificableNode<SADInput>(clarification)
         val clarificationNodeActivities by clarificableNode<SADInput>(clarification)
         val acceptanceNode by acceptanceNode<SADOutput>(acceptanceUseCase = acceptance)
+        val criticNode by criticNode<SADInput>(clarification)
+        val mapCriticClarification by node<String, SADInput> { input ->
+            SADInput(
+                plainTextUseCaseDescription = input,
+            )
+        }
 
         val mapClarificationNodeScenarios by node<String, SADInput> { input ->
             SADInput(
@@ -37,7 +44,9 @@ fun AIAgentGraphStrategyBuilder<*, *>.SADDiagramSubgraph(
         }
 
         edge(nodeStart forwardTo setPromptScenarios)
-        edge(setPromptScenarios forwardTo clarificationNodeScenarios)
+        edge(setPromptScenarios forwardTo criticNode)
+        edge(criticNode forwardTo mapCriticClarification)
+        edge(mapCriticClarification forwardTo clarificationNodeScenarios)
         edge(clarificationNodeScenarios forwardTo mapClarificationNodeScenarios)
 
         edge(mapClarificationNodeScenarios forwardTo setPromptActiviies)

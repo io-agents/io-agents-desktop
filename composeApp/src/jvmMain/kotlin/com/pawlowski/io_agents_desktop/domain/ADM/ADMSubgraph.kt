@@ -10,6 +10,7 @@ import com.pawlowski.io_agents_desktop.domain.acceptance.IAcceptance
 import com.pawlowski.io_agents_desktop.domain.acceptance.acceptanceNode
 import com.pawlowski.io_agents_desktop.domain.clarification.IClarificationUseCase
 import com.pawlowski.io_agents_desktop.domain.clarification.clarificableNode
+import com.pawlowski.io_agents_desktop.domain.critics.criticNode
 
 fun AIAgentGraphStrategyBuilder<*, *>.ADMDiagramSubgraph(
     clarification: IClarificationUseCase,
@@ -62,10 +63,19 @@ fun AIAgentGraphStrategyBuilder<*, *>.ADMDiagramSubgraph(
                 scenariosActivitiesText = input,
             )
         }
+        val criticNode by criticNode<ADMInput>(clarification)
+        val mapCriticClarification by node<String, ADMInput> { input ->
+            ADMInput(
+                scenariosActivitiesText = input,
+            )
+        }
+
 
         edge(nodeStart forwardTo setPromptModellerSEQNode)
+        edge(setPromptModellerSEQNode forwardTo criticNode)
+        edge(criticNode forwardTo mapCriticClarification)
 
-        edge(setPromptModellerSEQNode forwardTo clarificationNodeSEQ)
+        edge(mapCriticClarification forwardTo clarificationNodeSEQ)
         edge(clarificationNodeSEQ forwardTo mapClarificationSEQ)
         edge(mapClarificationSEQ forwardTo setPromptModellerCONDNode)
 

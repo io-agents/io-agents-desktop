@@ -12,6 +12,7 @@ import com.pawlowski.io_agents_desktop.domain.clarification.IClarificationUseCas
 import com.pawlowski.io_agents_desktop.domain.clarification.clarificableNode
 import com.pawlowski.io_agents_desktop.domain.plantUml.diagramErrorCorrectorNode
 import com.pawlowski.io_agents_desktop.domain.plantUml.generateUmlImage
+import com.pawlowski.io_agents_desktop.domain.critics.criticNode
 
 fun AIAgentGraphStrategyBuilder<*, *>.useCaseDiagramSubgraph(
     clarificationUseCase: IClarificationUseCase,
@@ -26,9 +27,17 @@ fun AIAgentGraphStrategyBuilder<*, *>.useCaseDiagramSubgraph(
         val generateDiagramNode by generateDiagramNode()
         val diagramCorrectorNode by diagramErrorCorrectorNode()
         val acceptanceNode by acceptanceNode<UseCaseDiagramOutput>(acceptanceUseCase = acceptance)
+        val criticNode by criticNode<UseCaseDiagramInput>(clarificationUseCase)
+        val mapCriticClarification by node<String, UseCaseDiagramInput> { input ->
+            UseCaseDiagramInput(
+                plainTextUseCaseDescription = input,
+            )
+        }
 
         edge(nodeStart forwardTo setPromptNode)
-        edge(setPromptNode forwardTo clarificationNode)
+        edge(setPromptNode forwardTo criticNode)
+        edge(criticNode forwardTo mapCriticClarification)
+        edge(mapCriticClarification forwardTo clarificationNode)
         edge(clarificationNode forwardTo generateDiagramNode)
         edge(
             generateDiagramNode forwardTo diagramCorrectorNode onCondition { result ->
