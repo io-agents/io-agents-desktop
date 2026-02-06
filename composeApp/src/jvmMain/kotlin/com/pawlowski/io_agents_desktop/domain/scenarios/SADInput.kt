@@ -1,11 +1,9 @@
-package com.pawlowski.io_agents_desktop.domain.scenarios
+package com.pawlowski.io_agents_desktop.domain.SAD
 
 data class SADInput(
-    val plantUmlText: String,
+    val plainTextUseCaseDescription: String,
 )
 
 data class SADOutput(
-    val scenariosText: String,
-    val activitiesText: String,
+    val scenariosActivitiesText: String,
 )
-
